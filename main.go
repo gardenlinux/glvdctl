@@ -23,38 +23,73 @@ type sourcePackageCve struct {
 	CvePublishedDate     string  `json:"cvePublishedDate"`
 }
 
+func versionList(ctx context.Context, cmd *cli.Command) error {
+	println("todo versionList")
+	return nil
+}
+
+func cveList(ctx context.Context, cmd *cli.Command) error {
+	url := "https://glvd.ingress.glvd.gardnlinux.shoot.canary.k8s-hana.ondemand.com/v1/cves/" + cmd.Args().Get(0)
+	req, _ := http.NewRequest("GET", url, nil)
+
+	res, _ := http.DefaultClient.Do(req)
+
+	defer res.Body.Close()
+	body, _ := io.ReadAll(res.Body)
+
+	fmt.Println(string(body))
+
+	var results []sourcePackageCve
+	err := json.Unmarshal(body, &results)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	for _, y := range results {
+		fmt.Println(y)
+	}
+
+	return nil
+}
+
+func cveShow(ctx context.Context, cmd *cli.Command) error {
+	println("todo cveShow")
+	return nil
+}
+
 func main() {
 	cmd := &cli.Command{
 		Name:                  "glvdctl",
 		EnableShellCompletion: true,
 		Commands: []*cli.Command{
 			{
+				Name:    "version",
+				Aliases: []string{},
+				Usage:   "list Garden Linux releases known in GLVD",
+				Commands: []*cli.Command{
+					{
+						Name: "list",
+						// Usage: "add a new template",
+						Action: versionList,
+					},
+				},
+			},
+
+			{
 				Name:    "cve",
 				Aliases: []string{"cves"},
 				Usage:   "list cves for a Garden Linux release",
-				Action: func(ctx context.Context, cmd *cli.Command) error {
-					url := "https://glvd.ingress.glvd.gardnlinux.shoot.canary.k8s-hana.ondemand.com/v1/cves/" + cmd.Args().Get(0)
-					req, _ := http.NewRequest("GET", url, nil)
-
-					res, _ := http.DefaultClient.Do(req)
-
-					defer res.Body.Close()
-					body, _ := io.ReadAll(res.Body)
-
-					fmt.Println(res)
-					fmt.Println(string(body))
-
-					var results []sourcePackageCve
-					err := json.Unmarshal(body, &results)
-					if err != nil {
-						log.Fatal(err)
-					}
-
-					for _, y := range results {
-						fmt.Println(y)
-					}
-
-					return nil
+				Commands: []*cli.Command{
+					{
+						Name: "list",
+						// Usage: "add a new template",
+						Action: cveList,
+					},
+					{
+						Name: "show",
+						// Usage: "remove an existing template",
+						Action: cveShow,
+					},
 				},
 			},
 		},
