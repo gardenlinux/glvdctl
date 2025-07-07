@@ -221,10 +221,25 @@ func versionList(ctx context.Context, cmd *cli.Command) error {
 
 	res, _ := http.DefaultClient.Do(req)
 
+	var results []string
 	defer res.Body.Close()
 	body, _ := io.ReadAll(res.Body)
 
-	fmt.Println(string(body))
+	err := json.Unmarshal(body, &results)
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	if len(results) == 0 {
+		fmt.Println("No Garden Linux versions found.")
+		return nil
+	}
+	header := color.New(color.FgHiCyan, color.Bold).SprintFunc()
+	value := color.New(color.FgHiWhite).SprintFunc()
+	fmt.Println(header("Garden Linux Versions:"))
+	for _, v := range results {
+		fmt.Println("  " + value(v))
+	}
 
 	return nil
 }
