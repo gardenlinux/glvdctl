@@ -52,6 +52,40 @@ type CveDetail struct {
 	VectorStringV2            string   `json:"vectorStringV2"`
 }
 
+func printSourcePackageCveTable(cves []sourcePackageCve) {
+	value := color.New(color.FgHiWhite).SprintFunc()
+	important := color.New(color.FgHiRed, color.Bold).SprintFunc()
+
+	// Print table header (no color for best alignment)
+	fmt.Printf("%-16s %-13s %-18s %-8s %6s %-4s %s\n",
+		"CVE ID",
+		"Package",
+		"Source Ver",
+		"GL Ver",
+		"Score",
+		"Vuln",
+		"Published",
+	)
+
+	// Print each row
+	for _, cve := range cves {
+		vuln := "no"
+		if cve.IsVulnerable {
+			vuln = important("YES")
+		}
+		fmt.Printf("%-16s %-13s %-18s %-8s %6.2f %-4s %s\n",
+			value(cve.CveId),
+			value(cve.SourcePackageName),
+			value(cve.SourcePackageVersion),
+			value(cve.GardenlinuxVersion),
+			cve.BaseScore,
+			vuln,
+			value(cve.CvePublishedDate),
+		)
+	}
+	fmt.Println()
+}
+
 type CveContext struct {
 	ID            int     `json:"id"`
 	CveId         string  `json:"cveId"`
@@ -204,18 +238,13 @@ func cveList(ctx context.Context, cmd *cli.Command) error {
 	defer res.Body.Close()
 	body, _ := io.ReadAll(res.Body)
 
-	fmt.Println(string(body))
-
 	var results []sourcePackageCve
 	err := json.Unmarshal(body, &results)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	for _, y := range results {
-		fmt.Println(y)
-	}
-
+	printSourcePackageCveTable(results)
 	return nil
 }
 
