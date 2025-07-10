@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -245,7 +246,11 @@ func versionList(ctx context.Context, cmd *cli.Command) error {
 }
 
 func cveList(ctx context.Context, cmd *cli.Command) error {
-	url := "https://glvd.ingress.glvd.gardnlinux.shoot.canary.k8s-hana.ondemand.com/v1/cves/" + cmd.Args().Get(0)
+	glVersion := cmd.Args().Get(0)
+	if glVersion == "" {
+		return errors.New("expected Garden Linux version as positional argument")
+	}
+	url := "https://glvd.ingress.glvd.gardnlinux.shoot.canary.k8s-hana.ondemand.com/v1/cves/" + glVersion
 	req, _ := http.NewRequest("GET", url, nil)
 
 	res, _ := http.DefaultClient.Do(req)
@@ -264,7 +269,11 @@ func cveList(ctx context.Context, cmd *cli.Command) error {
 }
 
 func cveShow(ctx context.Context, cmd *cli.Command) error {
-	url := "https://glvd.ingress.glvd.gardnlinux.shoot.canary.k8s-hana.ondemand.com/v1/cveDetails/" + cmd.Args().Get(0)
+	cveId := cmd.Args().Get(0)
+	if cveId == "" {
+		return errors.New("expected CVE ID as positional argument")
+	}
+	url := "https://glvd.ingress.glvd.gardnlinux.shoot.canary.k8s-hana.ondemand.com/v1/cveDetails/" + cveId
 	req, _ := http.NewRequest("GET", url, nil)
 
 	res, _ := http.DefaultClient.Do(req)
