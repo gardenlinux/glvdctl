@@ -104,6 +104,7 @@ func printCveDetails(details CveDetailsWithContext) {
 	label := color.New(color.FgHiYellow, color.Bold).SprintFunc()
 	value := color.New(color.FgHiWhite).SprintFunc()
 	important := color.New(color.FgHiRed, color.Bold).SprintFunc()
+	fixed := color.New(color.FgHiGreen, color.Bold).SprintFunc()
 
 	d := details.Details
 	fmt.Println(header("=== CVE Details ==="))
@@ -113,10 +114,59 @@ func printCveDetails(details CveDetailsWithContext) {
 	fmt.Printf("%s: %s\n", label("Published"), value(d.CvePublishedDate))
 	fmt.Printf("%s: %s\n", label("Modified"), value(d.CveModifiedDate))
 	fmt.Printf("%s: %s\n", label("Ingested"), value(d.CveIngestedDate))
-	fmt.Printf("%s: %v\n", label("Kernel LTS Versions"), value(d.KernelLtsVersion))
-	fmt.Printf("%s: %v\n", label("Kernel Fixed Versions"), value(d.KernelFixedVersion))
-	fmt.Printf("%s: %v\n", label("Kernel Is Fixed"), value(d.KernelIsFixed))
-	fmt.Printf("%s: %v\n", label("Kernel Is Relevant Subsystem"), value(d.KernelIsRelevantSubsystem))
+	// Print combined table of kernel-related fields
+	maxKernelLen := len(d.KernelLtsVersion)
+	if len(d.KernelFixedVersion) > maxKernelLen {
+		maxKernelLen = len(d.KernelFixedVersion)
+	}
+	if len(d.KernelIsFixed) > maxKernelLen {
+		maxKernelLen = len(d.KernelIsFixed)
+	}
+	if len(d.KernelIsRelevantSubsystem) > maxKernelLen {
+		maxKernelLen = len(d.KernelIsRelevantSubsystem)
+	}
+
+	if maxKernelLen > 0 {
+		fmt.Println(header("=== Kernel Details ==="))
+		fmt.Printf("%-20s %-20s %-10s %-20s\n",
+			label("LTS Version"),
+			label("Fixed Version"),
+			label("Is Fixed"),
+			label("Relevant Subsystem"),
+		)
+		for i := 0; i < maxKernelLen; i++ {
+			ltsVer := ""
+			if i < len(d.KernelLtsVersion) {
+				ltsVer = d.KernelLtsVersion[i]
+			}
+			fixedVer := ""
+			if i < len(d.KernelFixedVersion) {
+				fixedVer = d.KernelFixedVersion[i]
+			}
+			isFixed := ""
+			if i < len(d.KernelIsFixed) {
+				if d.KernelIsFixed[i] {
+					isFixed = fixed("YES")
+				} else {
+					isFixed = important("NO")
+				}
+			}
+			isRelevant := ""
+			if i < len(d.KernelIsRelevantSubsystem) {
+				if d.KernelIsRelevantSubsystem[i] {
+					isRelevant = important("YES")
+				} else {
+					isRelevant = value("no")
+				}
+			}
+			fmt.Printf("%-20s %-22s %-22s %-20s\n",
+				value(ltsVer),
+				value(fixedVer),
+				isFixed,
+				isRelevant,
+			)
+		}
+	}
 	// Print combined table of related fields
 	maxLen := len(d.Distro)
 	if len(d.DistroVersion) > maxLen {
@@ -136,7 +186,7 @@ func printCveDetails(details CveDetailsWithContext) {
 	}
 
 	fmt.Println(header("=== Per-Distro/Package Details ==="))
-	fmt.Printf("%-25s %-18s %-10s %-25s %-25s %-20s\n",
+	fmt.Printf("%-30s %-18s %-10s %-30s %-30s %-20s\n",
 		label("Distro"),
 		label("Version"),
 		label("Vuln?"),
@@ -182,14 +232,34 @@ func printCveDetails(details CveDetailsWithContext) {
 			value(verFixed),
 		)
 	}
-	fmt.Printf("%s: %s\n", label("Base Score V4.0"), value(d.BaseScoreV40))
-	fmt.Printf("%s: %s\n", label("Base Score V3.1"), value(d.BaseScoreV31))
-	fmt.Printf("%s: %s\n", label("Base Score V3.0"), value(d.BaseScoreV30))
-	fmt.Printf("%s: %s\n", label("Base Score V2"), value(d.BaseScoreV2))
-	fmt.Printf("%s: %s\n", label("Vector String V4.0"), value(d.VectorStringV40))
-	fmt.Printf("%s: %s\n", label("Vector String V3.1"), value(d.VectorStringV31))
-	fmt.Printf("%s: %s\n", label("Vector String V3.0"), value(d.VectorStringV30))
-	fmt.Printf("%s: %s\n", label("Vector String V2"), value(d.VectorStringV2))
+	// Print combined table of base scores and vector strings
+	fmt.Println(header("=== CVSS Scores & Vectors ==="))
+	fmt.Printf("%-18s %-12s %-46s\n",
+		label("Version"),
+		label("Base Score"),
+		label("Vector String"),
+	)
+	cvssRows := []struct {
+		Version      string
+		BaseScore    float32
+		VectorString string
+	}{
+		{"V4.0", d.BaseScoreV40, d.VectorStringV40},
+		{"V3.1", d.BaseScoreV31, d.VectorStringV31},
+		{"V3.0", d.BaseScoreV30, d.VectorStringV30},
+		{"V2", d.BaseScoreV2, d.VectorStringV2},
+	}
+	for _, row := range cvssRows {
+		scoreStr := ""
+		if row.BaseScore > 0 {
+			scoreStr = fmt.Sprintf("%.1f", row.BaseScore)
+		}
+		fmt.Printf("%-18s %-12s %-46s\n",
+			value(row.Version),
+			value(scoreStr),
+			value(row.VectorString),
+		)
+	}
 	fmt.Println()
 
 	if len(details.Contexts) > 0 {
@@ -207,7 +277,7 @@ func printCveDetails(details CveDetailsWithContext) {
 			fmt.Println()
 		}
 	} else {
-		fmt.Println(important("No context information available."))
+		fmt.Println(value("No context information available."))
 	}
 }
 
