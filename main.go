@@ -22,7 +22,7 @@ type sourcePackageCve struct {
 	SourcePackageName    string  `json:"sourcePackageName"`
 	SourcePackageVersion string  `json:"sourcePackageVersion"`
 	GardenlinuxVersion   string  `json:"gardenlinuxVersion"`
-	IsVulnerable         bool    `json:"isVulnerable"`
+	IsVulnerable         bool    `json:"vulnerable"`
 	CvePublishedDate     string  `json:"cvePublishedDate"`
 }
 
@@ -54,36 +54,31 @@ type CveDetail struct {
 }
 
 func printSourcePackageCveTable(cves []sourcePackageCve) {
-	value := color.New(color.FgHiWhite).SprintFunc()
 	important := color.New(color.FgHiRed, color.Bold).SprintFunc()
 
-	// Print table header (no color for best alignment)
-	fmt.Printf("%-16s %-13s %-18s %-8s %6s %-4s %s\n",
-		"CVE ID",
-		"Package",
-		"Source Ver",
-		"GL Ver",
-		"Score",
-		"Vuln",
-		"Published",
-	)
+	cvssCritical := color.New(color.FgHiRed, color.Bold).SprintFunc()
+	cvssHigh := color.New(color.FgHiMagenta, color.Bold).SprintFunc()
+	cvssMedium := color.New(color.FgHiYellow, color.Bold).SprintFunc()
 
-	// Print each row
+	fmt.Printf("%-18s %-4s %-4s %-46s %-20s %-20s\n", "CVE ID", "Vuln", "Score", "Vector String", "Source Package", "Version")
 	for _, cve := range cves {
 		vuln := "no"
 		if cve.IsVulnerable {
 			vuln = important("YES")
 		}
-		fmt.Printf("%-16s %-13s %-18s %-8s %6.2f %-4s %s\n",
-			value(cve.CveId),
-			value(cve.SourcePackageName),
-			value(cve.SourcePackageVersion),
-			value(cve.GardenlinuxVersion),
-			cve.BaseScore,
-			vuln,
-			value(cve.CvePublishedDate),
-		)
+		baseScore := ""
+		if cve.BaseScore >= 9 {
+			baseScore = cvssCritical(fmt.Sprintf("%4.1f", cve.BaseScore))
+		} else if cve.BaseScore >= 7 {
+			baseScore = cvssHigh(fmt.Sprintf("%4.1f", cve.BaseScore))
+		} else if cve.BaseScore >= 4 {
+			baseScore = cvssMedium(fmt.Sprintf("%4.1f", cve.BaseScore))
+		} else if cve.BaseScore >= 0.1 {
+			baseScore = fmt.Sprintf("%4.1f", cve.BaseScore)
+		}
+		fmt.Printf("%-18s %-4s %-4s %-46s %-20s %-20s\n", cve.CveId, vuln, baseScore, cve.VectorString, cve.SourcePackageName, cve.SourcePackageVersion)
 	}
+
 	fmt.Println()
 }
 
